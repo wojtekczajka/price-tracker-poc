@@ -18,6 +18,7 @@ git push
 ## to run app:
 ```bash
 python3 -m venv myvenv # optionally (I recommend :p) create a virtual environment
+source myvenv/bin/activate
 pip3 install -r requirements.txt
 uvicorn main:app --reload
 ```
