@@ -1,0 +1,3 @@
+[submodule "price-tracker-front"]
+	path = price-tracker-front
+	url = https://github.com/matiduda/price-tracker-front
