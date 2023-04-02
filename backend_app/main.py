@@ -40,15 +40,18 @@ async def home(request: Request, db: Session = Depends(database.get_db)):
     return templates.TemplateResponse('main.html', {'request': request, 'products': products})
 
 
-@app.get("/generate_plots")
+@app.get("/generate_plots/")
 def graph_create(db: Session = Depends(database.get_db)):
     generate_plots(db)
     return {"status": "success"}
 
 
-@app.post("/add_entries", response_model=schemas.Item)
-async def create_entry(entry: schemas.ItemEntry, db: Session = Depends(database.get_db)):
-    return crud.add_item_entry(db=db, entry=entry)
+@app.post("/add_entries/", response_model=schemas.Price)
+async def create_entry(entry: schemas.PriceEntry, db: Session = Depends(database.get_db)):
+    db_item = crud.get_item_by_id(db=db, id=entry.item_id)
+    if not db_item:
+        raise HTTPException(status_code=400, detail="The item does not exist")
+    return crud.add_item_price(db=db, price_entry=entry)
 
 
 @app.post("/auth/signup/", response_model=schemas.User)

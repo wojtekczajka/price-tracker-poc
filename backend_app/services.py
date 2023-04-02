@@ -2,15 +2,15 @@ import pandas as pd
 import plotly.express as px
 
 from sqlalchemy.orm import Session
-from backend_app import models
+from backend_app import models, crud
 
 from backend_app.item import Item
 
 def find_items(db: Session):
     items = []
-    items_query = db.query(models.Item.name).distinct().all()
-    for item_query in items_query:
-        items.append(Item(item_query[0]))
+    db_items = crud.get_items(db)
+    for db_item in db_items:
+        items.append(Item(db_item.name))
     return items
 
 def generate_plots(db: Session):

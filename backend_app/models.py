@@ -21,8 +21,19 @@ class Item(Base):
 
     id = Column(Integer, primary_key=True, index=True)
     name = Column(String)
+
+    prices = relationship("Price", back_populates="item")
+
+
+class Price(Base):
+    __tablename__ = "prices"
+
+    id = Column(Integer, primary_key=True, index=True)
     price = Column(Float)
     date = Column(String)
+    item_id = Column(Integer, ForeignKey("items.id"))
+
+    item = relationship("Item", back_populates="prices")
 
 
 class Comment(Base):

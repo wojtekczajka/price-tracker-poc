@@ -7,11 +7,28 @@ class ItemEntry(BaseModel):
     date: str
 
 
+class PriceBase(BaseModel):
+    pass
+
+
+class PriceEntry(PriceBase):
+    item_id: int
+    price: float
+    date: str
+
+
+class Price(PriceEntry):
+    id: int
+
+    class Config:
+        orm_mode = True
+
+
+
 class Item(BaseModel):
     id: int
     name: str
-    price: float
-    date: str
+    prices: list[Price]
 
     class Config:
         orm_mode = True

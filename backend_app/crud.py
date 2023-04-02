@@ -3,6 +3,10 @@ from sqlalchemy.orm import Session
 from backend_app import models, schemas, security
 
 
+def get_items(db: Session, skip: int = 0, limit: int = 100):
+    return db.query(models.Item).offset(skip).limit(limit).all()
+
+
 def get_item_entries(db: Session, skip: int = 0, limit: int = 100):
     return db.query(models.ItemEntry).offset(skip).limit(limit).all()
 
@@ -14,6 +18,18 @@ def add_item_entry(db: Session, entry: schemas.ItemEntry):
     db.commit()
     db.refresh(item_entry)
     return item_entry
+
+
+def add_item_price(db: Session, price_entry: schemas.PriceEntry):
+    item_price = models.Price(price=price_entry.price, date=price_entry.date, item_id=price_entry.item_id)
+    db.add(item_price)
+    db.commit()
+    db.refresh(item_price)
+    return item_price
+
+
+def get_item_by_id(db: Session, id: int):
+    return db.query(models.Item).filter(models.Item.id == id).first()
 
 
 def get_user_by_email(db: Session, email: str):

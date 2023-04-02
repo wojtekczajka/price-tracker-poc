@@ -22,3 +22,9 @@ source myvenv/bin/activate
 pip3 install -r requirements.txt
 uvicorn backend_app.main:app --reload
 ```
+
+## user
+```
+login: user
+password: user
+```
