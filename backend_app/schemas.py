@@ -24,7 +24,6 @@ class Price(PriceEntry):
         orm_mode = True
 
 
-
 class Item(BaseModel):
     id: int
     name: str
@@ -58,14 +57,29 @@ class CommentBase(BaseModel):
     item_id: int
 
 
-class CommentCreate(CommentBase):
+class CommentForm(CommentBase):
     pass
+
+
+class CommentCreate(CommentForm):
+    user_id: int
 
 
 class Comment(CommentBase):
     id: int
     user_id: int
     created_date: str
+
+    class Config:
+        orm_mode = True
+
+
+class ItemFollowers(BaseModel):
+    item_id: int
+    user_id: int
+
+    class Config:
+        orm_mode = True
 
 
 class Token(BaseModel):

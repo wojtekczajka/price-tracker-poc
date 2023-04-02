@@ -36,12 +36,15 @@ templates = Jinja2Templates(directory="backend_app/templates")
 
 @app.get("/")
 async def home(request: Request, db: Session = Depends(database.get_db)):
+    # TODO make product globall variable (performance)
     products = find_items(db)
     return templates.TemplateResponse('main.html', {'request': request, 'products': products})
 
 
 @app.get("/generate_plots/")
-def graph_create(db: Session = Depends(database.get_db)):
+def graph_create(current_user: Annotated[schemas.User, Depends(security.get_current_active_user)],
+                 db: Session = Depends(database.get_db)):
+    # TODO check if current user have admin role else raise error
     generate_plots(db)
     return {"status": "success"}
 
@@ -89,10 +92,32 @@ async def read_users_me(
     return current_user
 
 
-# @app.post("/comment/", response_model=schemas.Comment)
-# async def create_comment(
-#     current_user: Annotated[schemas.User, Depends(security.get_current_active_user)],
-#     item_id: int
-# ):
+@app.post("/comment/", response_model=schemas.Comment)
+async def create_comment(
+    current_user: Annotated[schemas.User, Depends(security.get_current_active_user)],
+    comment_form: schemas.CommentForm,
+    db: Session = Depends(database.get_db)
+):
+    db_item = crud.get_item_by_id(db=db, id=comment_form.item_id)
+    if not db_item:
+        raise HTTPException(status_code=400, detail="The item does not exist")
+    comment = schemas.CommentCreate(text=comment_form.text,
+                                    user_id=current_user.id,
+                                    item_id=comment_form.item_id)
+    return crud.add_coment_to_item(db=db, comment=comment)
+
+
+@app.post("/follow/", response_model=schemas.ItemFollowers)
+async def follow_item(
+    current_user: Annotated[schemas.User, Depends(security.get_current_active_user)],
+    item_id: int,
+    db: Session = Depends(database.get_db)
+):
+    db_item = crud.get_item_by_id(db=db, id=item_id)
+    if not db_item:
+        raise HTTPException(status_code=400, detail="The item does not exist")
+    return crud.add_item_to_item_followers(db=db, user_id=current_user.id, item_id=item_id)
+    
+    
     
 

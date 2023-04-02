@@ -47,3 +47,19 @@ def create_user(db: Session, user: schemas.UserCreate):
     db.commit()
     db.refresh(db_user)
     return db_user
+
+
+def add_coment_to_item(db: Session, comment: schemas.CommentCreate):
+    comment = models.Comment(text=comment.text, user_id=comment.user_id, item_id=comment.item_id)
+    db.add(comment)
+    db.commit()
+    db.refresh(comment)
+    return comment
+
+
+def add_item_to_item_followers(db: Session, user_id: int, item_id: int):
+    followed_item = models.ItemFollowers(item_id=item_id, user_id=user_id)
+    db.add(followed_item)
+    db.commit()
+    db.refresh(followed_item)
+    return followed_item
