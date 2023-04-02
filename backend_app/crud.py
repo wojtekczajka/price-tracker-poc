@@ -1,6 +1,6 @@
 from sqlalchemy.orm import Session
 
-from . import models, schemas
+from backend_app import models, schemas
 
 def get_item_entries(db: Session, skip: int = 0, limit: int = 100):
     return db.query(models.ItemEntry).offset(skip).limit(limit).all()

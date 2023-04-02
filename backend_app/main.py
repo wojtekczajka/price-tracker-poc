@@ -4,10 +4,10 @@ from fastapi.staticfiles import StaticFiles
 
 from sqlalchemy.orm import Session
 
-from sql_app import crud, models, schemas
-from sql_app.database import SessionLocal, engine
+from backend_app import models, crud, schemas
+from backend_app.database import SessionLocal, engine
 
-from services import generate_plots, find_items
+from backend_app.services import generate_plots, find_items
 
 from fastapi.middleware.cors import CORSMiddleware
 
@@ -32,9 +32,9 @@ def get_db():
     finally:
         db.close()
 
-app.mount("/static", StaticFiles(directory="static"), name="static")
+app.mount("/static", StaticFiles(directory="backend_app/static"), name="static")
 
-templates = Jinja2Templates(directory="templates")
+templates = Jinja2Templates(directory="backend_app/templates")
 
 @app.get("/")
 async def home(request: Request, db: Session = Depends(get_db)):

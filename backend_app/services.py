@@ -2,9 +2,9 @@ import pandas as pd
 import plotly.express as px
 
 from sqlalchemy.orm import Session
-from sql_app import models
+from backend_app import models
 
-from item import Item
+from backend_app.item import Item
 
 def find_items(db: Session):
     items = []
