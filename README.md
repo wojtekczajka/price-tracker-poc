@@ -15,10 +15,10 @@ git commit -m "submodule pulled"
 git push
 ```
 
-## to run app:
+## to run backend app:
 ```bash
 python3 -m venv myvenv # optionally (I recommend :p) create a virtual environment
 source myvenv/bin/activate
 pip3 install -r requirements.txt
-uvicorn main:app --reload
+uvicorn backend_app.main:app --reload
 ```

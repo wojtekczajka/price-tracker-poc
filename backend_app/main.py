@@ -1,10 +1,15 @@
-from fastapi import FastAPI, Request, Depends
+from datetime import timedelta
+
+from fastapi import FastAPI, Request, Depends, HTTPException, status
 from fastapi.templating import Jinja2Templates
 from fastapi.staticfiles import StaticFiles
+from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
 
 from sqlalchemy.orm import Session
 
-from backend_app import models, crud, schemas
+from typing import Annotated
+
+from backend_app import models, crud, schemas, database, security
 from backend_app.database import SessionLocal, engine
 
 from backend_app.services import generate_plots, find_items
@@ -24,28 +29,67 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Dependency
-def get_db():
-    db = SessionLocal()
-    try:
-        yield db
-    finally:
-        db.close()
-
 app.mount("/static", StaticFiles(directory="backend_app/static"), name="static")
 
 templates = Jinja2Templates(directory="backend_app/templates")
 
+
 @app.get("/")
-async def home(request: Request, db: Session = Depends(get_db)):
+async def home(request: Request, db: Session = Depends(database.get_db)):
     products = find_items(db)
     return templates.TemplateResponse('main.html', {'request': request, 'products': products})
 
+
 @app.get("/generate_plots")
-def graph_create(db: Session = Depends(get_db)):
+def graph_create(db: Session = Depends(database.get_db)):
     generate_plots(db)
     return {"status": "success"}
 
+
 @app.post("/add_entries", response_model=schemas.Item)
-async def create_entry(entry: schemas.ItemEntry, db: Session = Depends(get_db)):
+async def create_entry(entry: schemas.ItemEntry, db: Session = Depends(database.get_db)):
     return crud.add_item_entry(db=db, entry=entry)
+
+
+@app.post("/auth/signup/", response_model=schemas.User)
+def create_user(user: schemas.UserCreate, db: Session = Depends(database.get_db)):
+    db_user = crud.get_user_by_email(db, email=user.email)
+    if db_user:
+        raise HTTPException(status_code=400, detail="Email already registered")
+    return crud.create_user(db=db, user=user)
+
+
+@app.post("/auth/signin/", response_model=schemas.Token)
+async def login_for_access_token(
+    form_data: Annotated[OAuth2PasswordRequestForm, Depends()],
+    db: Session = Depends(database.get_db)
+):
+    user = security.authenticate_user(db=db, username=form_data.username, password=form_data.password)
+    if not user:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Incorrect username or password",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+    access_token_expires = timedelta(
+        minutes=security.ACCESS_TOKEN_EXPIRE_MINUTES)
+    access_token = security.create_access_token(
+        data={"sub": user.username}, expires_delta=access_token_expires
+    )
+    return {"access_token": access_token, "token_type": "bearer"}
+
+
+@app.get("/users/me/", response_model=schemas.User)
+async def read_users_me(
+    current_user: Annotated[schemas.User, Depends(security.get_current_active_user)]
+):
+    return current_user
+
+
+# @app.post("/comment/", response_model=schemas.Comment)
+# async def create_comment(
+#     current_user: Annotated[schemas.User, Depends(security.get_current_active_user)],
+#     item_id: int
+# ):
+    
+
