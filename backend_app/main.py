@@ -70,7 +70,8 @@ async def login_for_access_token(
     form_data: Annotated[OAuth2PasswordRequestForm, Depends()],
     db: Session = Depends(database.get_db)
 ):
-    user = security.authenticate_user(db=db, username=form_data.username, password=form_data.password)
+    user = security.authenticate_user(
+        db=db, username=form_data.username, password=form_data.password)
     if not user:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
@@ -87,7 +88,8 @@ async def login_for_access_token(
 
 @app.get("/users/me/", response_model=schemas.User)
 async def read_users_me(
-    current_user: Annotated[schemas.User, Depends(security.get_current_active_user)]
+    current_user: Annotated[schemas.User, Depends(
+        security.get_current_active_user)]
 ):
     return current_user
 
@@ -117,7 +119,3 @@ async def follow_item(
     if not db_item:
         raise HTTPException(status_code=400, detail="The item does not exist")
     return crud.add_item_to_item_followers(db=db, user_id=current_user.id, item_id=item_id)
-    
-    
-    
-

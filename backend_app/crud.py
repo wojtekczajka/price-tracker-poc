@@ -21,7 +21,8 @@ def add_item_entry(db: Session, entry: schemas.ItemEntry):
 
 
 def add_item_price(db: Session, price_entry: schemas.PriceEntry):
-    item_price = models.Price(price=price_entry.price, date=price_entry.date, item_id=price_entry.item_id)
+    item_price = models.Price(
+        price=price_entry.price, date=price_entry.date, item_id=price_entry.item_id)
     db.add(item_price)
     db.commit()
     db.refresh(item_price)
@@ -42,7 +43,8 @@ def get_user_by_username(db: Session, username: str):
 
 def create_user(db: Session, user: schemas.UserCreate):
     hashed_password = security.get_password_hash(user.password)
-    db_user = models.User(email=user.email, hashed_password=hashed_password, username=user.username)
+    db_user = models.User(
+        email=user.email, hashed_password=hashed_password, username=user.username)
     db.add(db_user)
     db.commit()
     db.refresh(db_user)
@@ -50,7 +52,8 @@ def create_user(db: Session, user: schemas.UserCreate):
 
 
 def add_coment_to_item(db: Session, comment: schemas.CommentCreate):
-    comment = models.Comment(text=comment.text, user_id=comment.user_id, item_id=comment.item_id)
+    comment = models.Comment(
+        text=comment.text, user_id=comment.user_id, item_id=comment.item_id)
     db.add(comment)
     db.commit()
     db.refresh(comment)
