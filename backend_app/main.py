@@ -119,3 +119,20 @@ async def follow_item(
     if not db_item:
         raise HTTPException(status_code=400, detail="The item does not exist")
     return crud.add_item_to_item_followers(db=db, user_id=current_user.id, item_id=item_id)
+
+
+@app.get("/items/")
+async def get_items(current_user: Annotated[schemas.User, Depends(security.get_current_active_user)],
+                    db: Session = Depends(database.get_db)):
+    products = crud.get_items(db)
+    return products
+
+
+@app.get("/item_prices/")
+async def get_item_prices(current_user: Annotated[schemas.User, Depends(security.get_current_active_user)],
+                          item_id: int,
+                          db: Session = Depends(database.get_db)
+                          ):
+    
+    item = crud.get_item_by_id(db, item_id)
+    return item.prices
