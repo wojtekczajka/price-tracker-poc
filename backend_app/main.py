@@ -112,13 +112,16 @@ async def create_comment(
 @app.post("/follow/", response_model=schemas.ItemFollowers)
 async def follow_item(
     current_user: Annotated[schemas.User, Depends(security.get_current_active_user)],
-    item_id: int,
+    follow_request: schemas.FollowRequest,
     db: Session = Depends(database.get_db)
 ):
-    db_item = crud.get_item_by_id(db=db, id=item_id)
+    db_item = crud.get_item_by_id(db=db, id=follow_request.item_id)
     if not db_item:
         raise HTTPException(status_code=400, detail="The item does not exist")
-    return crud.add_item_to_item_followers(db=db, user_id=current_user.id, item_id=item_id)
+    follow_item = crud.add_item_to_item_followers(db=db, user_id=current_user.id, item_id=follow_request.item_id)
+    if not follow_item:
+        raise HTTPException(status_code=400, detail="The user is already following this item")
+    return follow_item
 
 
 @app.get("/items/")

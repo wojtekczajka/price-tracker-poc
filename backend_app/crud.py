@@ -60,9 +60,17 @@ def add_coment_to_item(db: Session, comment: schemas.CommentCreate):
     return comment
 
 
+def get_item_followers_by_user_and_item(db: Session, user_id: int, item_id: int):
+    return db.query(models.ItemFollowers).filter_by(item_id=item_id, user_id=user_id).first()
+
+
 def add_item_to_item_followers(db: Session, user_id: int, item_id: int):
-    followed_item = models.ItemFollowers(item_id=item_id, user_id=user_id)
-    db.add(followed_item)
-    db.commit()
-    db.refresh(followed_item)
-    return followed_item
+    followed_item = get_item_followers_by_user_and_item(db=db, user_id=user_id, item_id=item_id)
+    if followed_item:
+        return None
+    else:
+        followed_item = models.ItemFollowers(item_id=item_id, user_id=user_id)
+        db.add(followed_item)
+        db.commit()
+        db.refresh(followed_item)
+        return followed_item
