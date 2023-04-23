@@ -139,3 +139,11 @@ async def get_item_prices(current_user: Annotated[schemas.User, Depends(security
     
     item = crud.get_item_by_id(db, item_id)
     return item.prices
+
+
+@app.get("/followed_items/")
+async def get_followed_items(current_user: Annotated[schemas.User, Depends(security.get_current_active_user)],
+                          user_id: int,
+                          db: Session = Depends(database.get_db)
+                          ):
+    return crud.get_items_followed_by_user(db, user_id)

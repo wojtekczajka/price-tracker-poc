@@ -74,3 +74,8 @@ def add_item_to_item_followers(db: Session, user_id: int, item_id: int):
         db.commit()
         db.refresh(followed_item)
         return followed_item
+
+
+def get_items_followed_by_user(db: Session, user_id: int):
+    return db.query(models.ItemFollowers).filter_by(user_id=user_id).all()
+
