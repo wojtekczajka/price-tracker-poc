@@ -76,6 +76,16 @@ def add_item_to_item_followers(db: Session, user_id: int, item_id: int):
         return followed_item
 
 
+def remove_item_from_item_followers(db: Session, user_id: int, item_id: int):
+    followed_item = get_item_followers_by_user_and_item(db=db, user_id=user_id, item_id=item_id)
+    if followed_item:
+        db.delete(followed_item)
+        db.commit()
+        return followed_item
+    else:
+        return None
+
+
 def get_items_followed_by_user(db: Session, user_id: int):
     return db.query(models.ItemFollowers).filter_by(user_id=user_id).all()
 
