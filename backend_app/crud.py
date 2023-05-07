@@ -7,6 +7,20 @@ def get_items(db: Session, skip: int = 0, limit: int = 100):
     return db.query(models.Item).offset(skip).limit(limit).all()
 
 
+def get_items_with_comments(db: Session, skip: int = 0, limit: int = 100):
+    items = get_items(db=db, skip=skip, limit=limit)
+    items_with_comments = []
+
+    for item in items:
+        item_dict = item.__dict__
+        item_comments = db.query(models.Comment).filter(
+            models.Comment.item_id == item.id).all()
+        item_dict['comments'] = item_comments
+        items_with_comments.append(item_dict)
+
+    return items_with_comments
+
+
 def get_item_entries(db: Session, skip: int = 0, limit: int = 100):
     return db.query(models.ItemEntry).offset(skip).limit(limit).all()
 

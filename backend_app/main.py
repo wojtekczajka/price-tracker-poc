@@ -142,7 +142,7 @@ async def follow_item(
 @app.get("/items/")
 async def get_items(current_user: Annotated[schemas.User, Depends(security.get_current_active_user)],
                     db: Session = Depends(database.get_db)):
-    products = crud.get_items(db)
+    products = crud.get_items_with_comments(db)
     return products
 
 
@@ -157,7 +157,9 @@ async def get_item_prices(current_user: Annotated[schemas.User, Depends(security
 
 
 @app.get("/followed_items/")
-async def get_followed_items(current_user: Annotated[schemas.User, Depends(security.get_current_active_user)],
-                          db: Session = Depends(database.get_db)
-                          ):
-    return crud.get_items_followed_by_user(db, current_user.id)
+async def get_followed_items(
+    current_user: Annotated[schemas.User, Depends(security.get_current_active_user)],
+    db: Session = Depends(database.get_db)
+):
+    followed_items = crud.get_items_followed_by_user(db, current_user.id)
+    return [{"id": item_id, "name": item_name} for item_id, item_name in followed_items]
