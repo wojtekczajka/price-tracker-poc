@@ -74,6 +74,19 @@ def add_coment_to_item(db: Session, comment: schemas.CommentCreate):
     return comment
 
 
+def delete_comment(db: Session, comment_id: int, user_id: int):
+    comment = db.query(models.Comment).filter(
+        models.Comment.id == comment_id, models.Comment.user_id == user_id
+    ).first()
+
+    if not comment:
+        return None
+
+    db.delete(comment)
+    db.commit()
+    return comment
+
+
 def get_item_followers_by_user_and_item(db: Session, user_id: int, item_id: int):
     return db.query(models.ItemFollowers).filter_by(item_id=item_id, user_id=user_id).first()
 

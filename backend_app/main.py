@@ -109,6 +109,23 @@ async def create_comment(
     return crud.add_coment_to_item(db=db, comment=comment)
 
 
+@app.delete("/comment/{comment_id}/")
+async def delete_comment(
+    current_user: Annotated[schemas.User, Depends(security.get_current_active_user)],
+    comment_id: int,
+    db: Session = Depends(database.get_db)
+):
+    deleted_comment = crud.delete_comment(
+        db=db, comment_id=comment_id, user_id=current_user.id)
+
+    if not deleted_comment:
+        raise HTTPException(
+            status_code=404, detail="Comment not found or user does not have access"
+        )
+
+    return deleted_comment
+
+
 @app.post("/follow/", response_model=schemas.ItemFollowers)
 async def follow_item(
     current_user: Annotated[schemas.User, Depends(security.get_current_active_user)],
@@ -118,9 +135,11 @@ async def follow_item(
     db_item = crud.get_item_by_id(db=db, id=follow_request.item_id)
     if not db_item:
         raise HTTPException(status_code=400, detail="The item does not exist")
-    follow_item = crud.add_item_to_item_followers(db=db, user_id=current_user.id, item_id=follow_request.item_id)
+    follow_item = crud.add_item_to_item_followers(
+        db=db, user_id=current_user.id, item_id=follow_request.item_id)
     if not follow_item:
-        raise HTTPException(status_code=400, detail="The user is already following this item")
+        raise HTTPException(
+            status_code=400, detail="The user is already following this item")
     return follow_item
 
 
@@ -133,9 +152,11 @@ async def follow_item(
     db_item = crud.get_item_by_id(db=db, id=follow_request.item_id)
     if not db_item:
         raise HTTPException(status_code=400, detail="The item does not exist")
-    follow_item = crud.remove_item_from_item_followers(db=db, user_id=current_user.id, item_id=follow_request.item_id)
+    follow_item = crud.remove_item_from_item_followers(
+        db=db, user_id=current_user.id, item_id=follow_request.item_id)
     if not follow_item:
-        raise HTTPException(status_code=400, detail="The user is not following this item")
+        raise HTTPException(
+            status_code=400, detail="The user is not following this item")
     return follow_item
 
 
@@ -151,7 +172,7 @@ async def get_item_prices(current_user: Annotated[schemas.User, Depends(security
                           item_id: int,
                           db: Session = Depends(database.get_db)
                           ):
-    
+
     item = crud.get_item_by_id(db, item_id)
     return item.prices
 
