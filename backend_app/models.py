@@ -51,3 +51,5 @@ class ItemFollowers(Base):
 
     item_id = Column(Integer, ForeignKey("items.id"), primary_key=True)
     user_id = Column(Integer, ForeignKey("users.id"), primary_key=True)
+
+    item = relationship("Item")

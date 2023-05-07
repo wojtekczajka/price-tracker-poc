@@ -1,4 +1,4 @@
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, joinedload
 
 from backend_app import models, schemas, security
 
@@ -87,5 +87,11 @@ def remove_item_from_item_followers(db: Session, user_id: int, item_id: int):
 
 
 def get_items_followed_by_user(db: Session, user_id: int):
-    return db.query(models.ItemFollowers).filter_by(user_id=user_id).all()
+    return (
+        db.query(models.ItemFollowers)
+        .join(models.Item)
+        .filter(models.ItemFollowers.user_id == user_id)
+        .options(joinedload(models.ItemFollowers.item))
+        .all()
+    )
 
