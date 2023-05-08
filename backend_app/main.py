@@ -16,6 +16,9 @@ from backend_app.services import generate_plots, find_items
 
 from fastapi.middleware.cors import CORSMiddleware
 
+from apscheduler.schedulers.background import BackgroundScheduler
+import subprocess
+
 models.Base.metadata.create_all(bind=engine)
 
 app = FastAPI()
@@ -28,6 +31,17 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+scheduler = BackgroundScheduler()
+
+
+def execute_job():
+    subprocess.run(["/bin/sh", "cron_jobs/job.sh"])
+
+
+@scheduler.scheduled_job("cron", hour=17)
+def run_job():
+    execute_job()
 
 app.mount("/static", StaticFiles(directory="backend_app/static"), name="static")
 
