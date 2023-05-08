@@ -183,4 +183,5 @@ async def get_followed_items(
     db: Session = Depends(database.get_db)
 ):
     followed_items = crud.get_items_followed_by_user(db, current_user.id)
-    return [{"id": item_id, "name": item_name} for item_id, item_name in followed_items]
+    return [{"id": item.item.id, "name": item.item.name} for item in followed_items]
+
