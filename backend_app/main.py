@@ -19,6 +19,13 @@ from fastapi.middleware.cors import CORSMiddleware
 from apscheduler.schedulers.background import BackgroundScheduler
 import subprocess
 
+import os
+from starlette.config import Config
+from authlib.integrations.starlette_client import OAuth
+from starlette.responses import RedirectResponse, JSONResponse
+from authlib.integrations.starlette_client import OAuthError
+from starlette.middleware.sessions import SessionMiddleware
+
 models.Base.metadata.create_all(bind=engine)
 
 app = FastAPI()
@@ -33,6 +40,26 @@ app.add_middleware(
 )
 
 scheduler = BackgroundScheduler()
+
+GOOGLE_CLIENT_ID = "744399416338-d70evtqnuket0vendgf4gqhicu5rk9b3.apps.googleusercontent.com"
+GOOGLE_CLIENT_SECRET = "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"
+if GOOGLE_CLIENT_ID is None or GOOGLE_CLIENT_SECRET is None:
+    raise BaseException('Missing env variables')
+
+# Set up oauth
+config_data = {'GOOGLE_CLIENT_ID': GOOGLE_CLIENT_ID, 'GOOGLE_CLIENT_SECRET': GOOGLE_CLIENT_SECRET}
+starlette_config = Config(environ=config_data)
+oauth = OAuth(starlette_config)
+oauth.register(
+    name='google',
+    server_metadata_url='https://accounts.google.com/.well-known/openid-configuration',
+    client_kwargs={'scope': 'openid email profile'},
+)
+
+SECRET_KEY = "7275c7b12482f64ba05ba7e4614bd5a32439e7332fbb8290dfe8e6ce976d1df6"
+if SECRET_KEY is None:
+    raise 'Missing SECRET_KEY'
+app.add_middleware(SessionMiddleware, secret_key=SECRET_KEY)
 
 
 def execute_job():
@@ -69,6 +96,26 @@ async def create_entry(entry: schemas.PriceEntry, db: Session = Depends(database
     if not db_item:
         raise HTTPException(status_code=400, detail="The item does not exist")
     return crud.add_item_price(db=db, price_entry=entry)
+
+@app.route("/auth/google/")
+async def login_with_google(request: Request, db: Session = Depends(database.get_db)):
+    credentials_exception = HTTPException(
+        status_code=status.HTTP_401_UNAUTHORIZED,
+        detail="Could not validate credentials",
+        headers={"WWW-Authenticate": "Bearer"},
+    )
+    try:
+        access_token = await oauth.google.authorize_access_token(request)
+    except OAuthError:
+        raise credentials_exception
+    user_data = await oauth.google.parse_id_token(request, access_token)
+    if crud.get_user_by_email(db,user_data['email']):
+        access_token_expires = timedelta(
+            minutes=security.ACCESS_TOKEN_EXPIRE_MINUTES)
+        access_token = security.create_access_token(
+            data={"sub": user_data['email']}, expires_delta=access_token_expires)
+        return JSONResponse({'result': True, 'access_token': access_token})
+    raise credentials_exception #tu dopisac
 
 
 @app.post("/auth/signup/", response_model=schemas.User)
