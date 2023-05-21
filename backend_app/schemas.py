@@ -41,7 +41,6 @@ class UserCreate(UserBase):
     username: str
     password: str
 
-
 class User(UserBase):
     username: str
     id: int

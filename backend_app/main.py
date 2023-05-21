@@ -19,24 +19,22 @@ from fastapi.middleware.cors import CORSMiddleware
 from apscheduler.schedulers.background import BackgroundScheduler
 import subprocess
 
-import os
 from starlette.config import Config
 from authlib.integrations.starlette_client import OAuth
 from starlette.responses import RedirectResponse, JSONResponse
 from authlib.integrations.starlette_client import OAuthError
 from starlette.middleware.sessions import SessionMiddleware
+import random
+import string
 
 models.Base.metadata.create_all(bind=engine)
 
 app = FastAPI()
 
-origins = ["*"]
+SECRET_KEY = "7275c7b12482f64ba05ba7e4614bd5a32439e7332fbb8290dfe8e6ce976d1df6"
 app.add_middleware(
-    CORSMiddleware,
-    allow_origins=origins,
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
+    SessionMiddleware,
+    secret_key=SECRET_KEY
 )
 
 scheduler = BackgroundScheduler()
@@ -55,12 +53,6 @@ oauth.register(
     server_metadata_url='https://accounts.google.com/.well-known/openid-configuration',
     client_kwargs={'scope': 'openid email profile'},
 )
-
-SECRET_KEY = "7275c7b12482f64ba05ba7e4614bd5a32439e7332fbb8290dfe8e6ce976d1df6"
-if SECRET_KEY is None:
-    raise 'Missing SECRET_KEY'
-app.add_middleware(SessionMiddleware, secret_key=SECRET_KEY)
-
 
 def execute_job():
     subprocess.run(["/bin/sh", "cron_jobs/job.sh"])
@@ -99,10 +91,10 @@ async def create_entry(entry: schemas.PriceEntry, db: Session = Depends(database
 
 @app.route('/google_redirect')
 async def redirect_google(request: Request):
-    redirect_uri = request.url_for('google')  # This creates the url for the /auth endpoint
+    redirect_uri = request.url_for('google')
     return await oauth.google.authorize_redirect(request, redirect_uri)
 
-@app.route("/google")
+@app.post("/google", response_model=schemas.Token, name = 'google')
 async def login_with_google(request: Request, db: Session = Depends(database.get_db)):
     credentials_exception = HTTPException(
         status_code=status.HTTP_401_UNAUTHORIZED,
@@ -120,7 +112,17 @@ async def login_with_google(request: Request, db: Session = Depends(database.get
         access_token = security.create_access_token(
             data={"sub": user_data['email']}, expires_delta=access_token_expires)
         return {"access_token": access_token, "token_type": "bearer"}
-    raise credentials_exception #tu dopisac tworzenie usera
+    else:
+        characters = string.ascii_letters + string.digits + string.punctuation
+        pwd = ''.join(random.choice(characters) for j in range(20))
+        user = schemas.UserCreate(email = user_data['email'], username =  user_data['name'], password = pwd)
+        crud.create_user(db=db, user=user)
+        access_token_expires = timedelta(
+            minutes=security.ACCESS_TOKEN_EXPIRE_MINUTES)
+        access_token = security.create_access_token(
+            data={"sub": user_data['email']}, expires_delta=access_token_expires)
+        return {"access_token": access_token, "token_type": "bearer"}
+    
 
 
 @app.post("/auth/signup/", response_model=schemas.User)
