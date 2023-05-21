@@ -97,7 +97,12 @@ async def create_entry(entry: schemas.PriceEntry, db: Session = Depends(database
         raise HTTPException(status_code=400, detail="The item does not exist")
     return crud.add_item_price(db=db, price_entry=entry)
 
-@app.route("/auth/google/")
+@app.route('/google_redirect')
+async def redirect_google(request: Request):
+    redirect_uri = request.url_for('google')  # This creates the url for the /auth endpoint
+    return await oauth.google.authorize_redirect(request, redirect_uri)
+
+@app.route("/google")
 async def login_with_google(request: Request, db: Session = Depends(database.get_db)):
     credentials_exception = HTTPException(
         status_code=status.HTTP_401_UNAUTHORIZED,
@@ -114,8 +119,8 @@ async def login_with_google(request: Request, db: Session = Depends(database.get
             minutes=security.ACCESS_TOKEN_EXPIRE_MINUTES)
         access_token = security.create_access_token(
             data={"sub": user_data['email']}, expires_delta=access_token_expires)
-        return JSONResponse({'result': True, 'access_token': access_token})
-    raise credentials_exception #tu dopisac
+        return {"access_token": access_token, "token_type": "bearer"}
+    raise credentials_exception #tu dopisac tworzenie usera
 
 
 @app.post("/auth/signup/", response_model=schemas.User)
