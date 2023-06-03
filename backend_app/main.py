@@ -1,4 +1,4 @@
-from datetime import timedelta
+from datetime import timedelta, date
 
 from fastapi import FastAPI, Request, Depends, HTTPException, status
 from fastapi.templating import Jinja2Templates
@@ -97,6 +97,13 @@ async def login_for_access_token(
     access_token = security.create_access_token(
         data={"sub": user.username}, expires_delta=access_token_expires
     )
+
+    subscription = crud.get_last_subscription_by_user_id(db, user_id=user.id)
+
+    if subscription.end_date > date.today():
+        crud.update_user_subscribed_false(db, id=user.id)
+  
+
     return {"access_token": access_token, "token_type": "bearer"}
 
 
