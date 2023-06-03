@@ -1,4 +1,5 @@
 from pydantic import BaseModel
+from datetime import date
 
 
 class ItemEntry(BaseModel):
@@ -47,6 +48,7 @@ class User(UserBase):
     id: int
     is_active: bool
     role: str
+    is_subscribed: bool
 
     class Config:
         orm_mode = True
@@ -94,3 +96,11 @@ class TokenData(BaseModel):
 class FollowRequest(BaseModel):
     item_id: int
     
+
+class SubscriptionCreate(BaseModel):
+    start_date: date
+    end_date: date
+    user_id: int
+
+class Subscription(SubscriptionCreate):
+    id: int

@@ -122,3 +122,26 @@ def get_items_followed_by_user(db: Session, user_id: int):
         .all()
     )
 
+def get_last_subscription_by_user_id(db: Session, user_id: int):
+    return db.query(models.ItemFollowers).filter_by(user_id=user_id).order_by(models.Subscription.end_date.desc()).first()
+
+def get_all_subscriptions_by_user_id(db: Session, user_id: int):
+    return db.query(models.ItemFollowers).filter_by(user_id=user_id).order_by(models.Subscription.end_date.desc()).all()
+
+def add_subscription(db: Session, entry: schemas.SubscriptionCreate):
+    sub_entry = models.Subscription(
+        start_date=entry.start_date, end_date=entry.end_date, user_id = entry.user_id)
+    db.add(sub_entry)
+    db.commit()
+    db.refresh(sub_entry)
+    return sub_entry
+
+def update_user_subscribed_false(db: Session, id: int):
+    update = db.query(models.User).filter(models.User.id == id).first()
+    update.is_subscribed = False
+    db.commit()
+
+def update_user_subscribed_true(db: Session, id: int):
+    update = db.query(models.User).filter(models.User.id == id).first()
+    update.is_subscribed = True
+    db.commit()

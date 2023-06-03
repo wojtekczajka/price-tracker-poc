@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, Float, Boolean, ForeignKey
+from sqlalchemy import Column, Integer, String, Float, Boolean, ForeignKey, Date
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 
@@ -14,6 +14,7 @@ class User(Base):
     hashed_password = Column(String)
     is_active = Column(Boolean, default=True)
     role = Column(String, default='user')
+    is_subscribed = Column(Boolean, default=False)
 
 
 class Item(Base):
@@ -53,3 +54,12 @@ class ItemFollowers(Base):
     user_id = Column(Integer, ForeignKey("users.id"), primary_key=True)
 
     item = relationship("Item")
+
+
+class Subscription(Base):
+    __tablename__ = "subscriptions"
+
+    id = Column(Integer, primary_key=True, index=True)
+    start_date = Column(Date)
+    end_date = Column(Date)
+    user_id = Column(Integer, ForeignKey("users.id"), primary_key=True)
