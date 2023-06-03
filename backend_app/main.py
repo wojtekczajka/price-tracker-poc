@@ -102,9 +102,11 @@ async def login_for_access_token(
 
     if subscription.end_date < date.today():
         crud.update_user_subscribed_false(db, id=user.id)
-  
+        return {"access_token": access_token, "token_type": "bearer", "is_subscribed": False, "end_date": None }
+    else:
+        return {"access_token": access_token, "token_type": "bearer", "is_subscribed": True, "end_date": subscription.end_date.strftime("%d/%m/%Y")}
 
-    return {"access_token": access_token, "token_type": "bearer"}
+    
 
 
 @app.get("/users/me/", response_model=schemas.User)
