@@ -214,3 +214,45 @@ async def get_followed_items(
     followed_items = crud.get_items_followed_by_user(db, current_user.id)
     return [{"id": item.item.id, "name": item.item.name} for item in followed_items]
 
+@app.get("/user_subscription/")
+async def get_user_subscription(
+    current_user: Annotated[schemas.User, Depends(security.get_current_active_user)],
+    db: Session = Depends(database.get_db)):
+    user_subscription = crud.get_last_subscription_by_user_id(db, current_user.id)
+    if user_subscription:
+        if user_subscription.end_date > date.today():
+            return user_subscription
+    return None
+
+@app.get("/all_user_subscriptions/")
+async def get_user_subscription(
+    current_user: Annotated[schemas.User, Depends(security.get_current_active_user)],
+    db: Session = Depends(database.get_db)):
+    user_subscriptions = crud.get_all_subscriptions_by_user_id(db, current_user.id)
+    if user_subscriptions:
+        return user_subscriptions
+    return None
+
+
+@app.post("/create_user_subscription/")
+async def create_user_subscription(
+    current_user: Annotated[schemas.User, Depends(security.get_current_active_user)],
+    sub_request: schemas.SubscriptionRequest,
+    db: Session = Depends(database.get_db)):
+    last_subscription = crud.get_last_subscription_by_user_id(db, current_user.id)
+    if last_subscription:
+        if last_subscription.end_date > date.today():
+            return HTTPException(status_code=400, detail="User already has an active subscription")
+    months = sub_request.months
+    start_date = date.today()
+    end_date = start_date + timedelta(days=(months*30))
+    user_subscription = crud.add_subscription(db, start_date, end_date, current_user.id)
+    if not user_subscription:
+        return HTTPException(status_code=400, detail="Error creating subscription")
+    return user_subscription
+
+@app.post("/delete_current_user_subscription/")
+async def create_user_subscription(
+    current_user: Annotated[schemas.User, Depends(security.get_current_active_user)],
+    db: Session = Depends(database.get_db)):
+    return crud.delete_current_subscription(db, current_user.id)

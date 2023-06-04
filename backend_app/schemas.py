@@ -102,5 +102,8 @@ class SubscriptionCreate(BaseModel):
     end_date: date
     user_id: int
 
+class SubscriptionRequest(BaseModel):
+    months: int
+
 class Subscription(SubscriptionCreate):
     id: int

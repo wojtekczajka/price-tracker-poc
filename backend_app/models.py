@@ -59,7 +59,6 @@ class ItemFollowers(Base):
 class Subscription(Base):
     __tablename__ = "subscriptions"
 
-    id = Column(Integer, primary_key=True, index=True)
     start_date = Column(Date)
     end_date = Column(Date)
     user_id = Column(Integer, ForeignKey("users.id"), primary_key=True)

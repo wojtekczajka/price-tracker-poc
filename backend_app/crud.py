@@ -128,14 +128,22 @@ def get_last_subscription_by_user_id(db: Session, user_id: int):
 def get_all_subscriptions_by_user_id(db: Session, user_id: int):
     return db.query(models.Subscription).filter_by(user_id=user_id).order_by(models.Subscription.end_date.desc()).all()
 
-def add_subscription(db: Session, entry: schemas.SubscriptionCreate):
+def add_subscription(db: Session, start_date, end_date, user_id: int):
     sub_entry = models.Subscription(
-        start_date=entry.start_date, end_date=entry.end_date, user_id = entry.user_id)
+        start_date=start_date, end_date=end_date, user_id = user_id)
     db.add(sub_entry)
     db.commit()
     db.refresh(sub_entry)
     return sub_entry
 
+def delete_current_subscription(db: Session, user_id: int):
+    sub_entry = get_last_subscription_by_user_id(db=db, user_id=user_id)
+    if sub_entry:
+        db.delete(sub_entry)
+        db.commit()
+        return sub_entry
+    return None
+    
 def update_user_subscribed_false(db: Session, id: int):
     update = db.query(models.User).filter(models.User.id == id).first()
     update.is_subscribed = False
