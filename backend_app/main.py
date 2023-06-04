@@ -19,6 +19,10 @@ from fastapi.middleware.cors import CORSMiddleware
 from apscheduler.schedulers.background import BackgroundScheduler
 import subprocess
 
+
+
+
+
 models.Base.metadata.create_all(bind=engine)
 
 app = FastAPI()
@@ -99,12 +103,14 @@ async def login_for_access_token(
     )
 
     subscription = crud.get_last_subscription_by_user_id(db, user_id=user.id)
-
-    if subscription.end_date < date.today():
-        crud.update_user_subscribed_false(db, id=user.id)
+    if subscription == None:
         return {"access_token": access_token, "token_type": "bearer", "is_subscribed": False, "end_date": None }
     else:
-        return {"access_token": access_token, "token_type": "bearer", "is_subscribed": True, "end_date": subscription.end_date.strftime("%d/%m/%Y")}
+        if subscription.end_date < date.today():
+            crud.update_user_subscribed_false(db, id=user.id)
+            return {"access_token": access_token, "token_type": "bearer", "is_subscribed": False, "end_date": None }
+        else:
+            return {"access_token": access_token, "token_type": "bearer", "is_subscribed": True, "end_date": subscription.end_date.strftime("%d/%m/%Y")}
 
     
 
