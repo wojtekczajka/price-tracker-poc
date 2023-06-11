@@ -18,14 +18,34 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from apscheduler.schedulers.background import BackgroundScheduler
 import subprocess
+import json
+import secrets
 
+from authlib.integrations.starlette_client import OAuth, OAuthError
 
-
+from starlette.config import Config
+from starlette.middleware.sessions import SessionMiddleware
+from starlette.requests import Request
+from starlette.responses import HTMLResponse, RedirectResponse
 
 
 models.Base.metadata.create_all(bind=engine)
 
 app = FastAPI()
+app.add_middleware(SessionMiddleware, secret_key="!secret")
+
+config = Config('backend_app/.env')
+print(config.__dict__)
+oauth = OAuth(config)
+
+CONF_URL = 'https://accounts.google.com/.well-known/openid-configuration'
+oauth.register(
+    name='google',
+    server_metadata_url=str(CONF_URL),
+    client_kwargs={
+        'scope': 'openid email profile'
+    }
+)
 
 origins = ["*"]
 app.add_middleware(
@@ -47,16 +67,68 @@ def execute_job():
 def run_job():
     execute_job()
 
+
 app.mount("/static", StaticFiles(directory="backend_app/static"), name="static")
 
 templates = Jinja2Templates(directory="backend_app/templates")
 
+frontend_url = "http://localhost:5173"
 
-@app.get("/")
-async def home(request: Request, db: Session = Depends(database.get_db)):
-    # TODO make product globall variable (performance)
-    products = find_items(db)
-    return templates.TemplateResponse('main.html', {'request': request, 'products': products})
+@app.get('/')
+async def homepage(request: Request):
+    user = request.session.get('user')
+    if user:
+        data = json.dumps(user)
+        html = (
+            f'<pre>{data}</pre>'
+            '<a href="/logout">logout</a>'
+        )
+        return HTMLResponse(html)
+    return HTMLResponse('<a href="/auth/google_signin/">login</a>')
+
+
+@app.get('/auth/google_signin/')
+async def login_user_via_google(request: Request):
+    redirect_uri = "http://127.0.0.1:8000/auth/google_auth/"
+    return await oauth.google.authorize_redirect(request, redirect_uri)
+
+
+@app.get('/auth/google_auth/')
+async def auth(request: Request, db: Session = Depends(database.get_db)):
+    try:
+        token = await oauth.google.authorize_access_token(request)
+    except OAuthError as error:
+        return error
+    user = token.get('userinfo')
+
+    db_user = crud.get_user_by_email(db, email=user['email'])
+
+    if not db_user:
+        google_user = schemas.UserCreate(
+            username=user['name'], email=user['email'], password=secrets.token_hex(16))
+        db_user = crud.create_user(db=db, user=google_user)
+
+    subscription = crud.get_last_subscription_by_user_id(db, user_id=db_user.id)
+
+    access_token_expires = timedelta(
+        minutes=security.ACCESS_TOKEN_EXPIRE_MINUTES)
+    access_token = security.create_access_token(
+        data={"sub": db_user.username}, expires_delta=access_token_expires
+    )
+
+    if user:
+        request.session['user'] = dict(user)
+
+    redirect_url = f"{frontend_url}/?access_token={access_token}&is_subscribed={subscription is not None}"
+    if subscription is not None:
+        redirect_url += f"&end_date={subscription.end_date.strftime('%d/%m/%Y')}"
+    
+    return RedirectResponse(url=redirect_url)
+
+@app.get('/logout/')
+async def logout(request: Request):
+    request.session.pop('user', None)
+    return RedirectResponse(url='/')
 
 
 @app.get("/generate_plots/")
@@ -104,15 +176,13 @@ async def login_for_access_token(
 
     subscription = crud.get_last_subscription_by_user_id(db, user_id=user.id)
     if subscription == None:
-        return {"access_token": access_token, "token_type": "bearer", "is_subscribed": False, "end_date": None }
+        return {"access_token": access_token, "token_type": "bearer", "is_subscribed": False, "end_date": None}
     else:
         if subscription.end_date < date.today():
             crud.update_user_subscribed_false(db, id=user.id)
-            return {"access_token": access_token, "token_type": "bearer", "is_subscribed": False, "end_date": None }
+            return {"access_token": access_token, "token_type": "bearer", "is_subscribed": False, "end_date": None}
         else:
             return {"access_token": access_token, "token_type": "bearer", "is_subscribed": True, "end_date": subscription.end_date.strftime("%d/%m/%Y")}
-
-    
 
 
 @app.get("/users/me/", response_model=schemas.User)
@@ -214,21 +284,25 @@ async def get_followed_items(
     followed_items = crud.get_items_followed_by_user(db, current_user.id)
     return [{"id": item.item.id, "name": item.item.name} for item in followed_items]
 
+
 @app.get("/user_subscription/")
 async def get_user_subscription(
-    current_user: Annotated[schemas.User, Depends(security.get_current_active_user)],
-    db: Session = Depends(database.get_db)):
-    user_subscription = crud.get_last_subscription_by_user_id(db, current_user.id)
+        current_user: Annotated[schemas.User, Depends(security.get_current_active_user)],
+        db: Session = Depends(database.get_db)):
+    user_subscription = crud.get_last_subscription_by_user_id(
+        db, current_user.id)
     if user_subscription:
         if user_subscription.end_date > date.today():
             return user_subscription
     return None
 
+
 @app.get("/all_user_subscriptions/")
 async def get_user_subscription(
-    current_user: Annotated[schemas.User, Depends(security.get_current_active_user)],
-    db: Session = Depends(database.get_db)):
-    user_subscriptions = crud.get_all_subscriptions_by_user_id(db, current_user.id)
+        current_user: Annotated[schemas.User, Depends(security.get_current_active_user)],
+        db: Session = Depends(database.get_db)):
+    user_subscriptions = crud.get_all_subscriptions_by_user_id(
+        db, current_user.id)
     if user_subscriptions:
         return user_subscriptions
     return None
@@ -236,23 +310,26 @@ async def get_user_subscription(
 
 @app.post("/create_user_subscription/")
 async def create_user_subscription(
-    current_user: Annotated[schemas.User, Depends(security.get_current_active_user)],
-    sub_request: schemas.SubscriptionRequest,
-    db: Session = Depends(database.get_db)):
-    last_subscription = crud.get_last_subscription_by_user_id(db, current_user.id)
+        current_user: Annotated[schemas.User, Depends(security.get_current_active_user)],
+        sub_request: schemas.SubscriptionRequest,
+        db: Session = Depends(database.get_db)):
+    last_subscription = crud.get_last_subscription_by_user_id(
+        db, current_user.id)
     if last_subscription:
         if last_subscription.end_date > date.today():
             return HTTPException(status_code=400, detail="User already has an active subscription")
     months = sub_request.months
     start_date = date.today()
     end_date = start_date + timedelta(days=(months*30))
-    user_subscription = crud.add_subscription(db, start_date, end_date, current_user.id)
+    user_subscription = crud.add_subscription(
+        db, start_date, end_date, current_user.id)
     if not user_subscription:
         return HTTPException(status_code=400, detail="Error creating subscription")
     return user_subscription
 
+
 @app.post("/delete_current_user_subscription/")
 async def create_user_subscription(
-    current_user: Annotated[schemas.User, Depends(security.get_current_active_user)],
-    db: Session = Depends(database.get_db)):
+        current_user: Annotated[schemas.User, Depends(security.get_current_active_user)],
+        db: Session = Depends(database.get_db)):
     return crud.delete_current_subscription(db, current_user.id)
