@@ -154,14 +154,13 @@ def create_user(user: schemas.UserCreate, db: Session = Depends(database.get_db)
         raise HTTPException(status_code=400, detail="Email already registered")
     return crud.create_user(db=db, user=user)
 
-
 @app.post("/auth/signin/", response_model=schemas.Token)
 async def login_for_access_token(
-    form_data: Annotated[OAuth2PasswordRequestForm, Depends()],
+    user: schemas.UserLogin,
     db: Session = Depends(database.get_db)
 ):
     user = security.authenticate_user(
-        db=db, username=form_data.username, password=form_data.password)
+        db=db, username=user.username, password=user.password)
     if not user:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
