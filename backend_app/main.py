@@ -147,12 +147,18 @@ async def create_entry(entry: schemas.PriceEntry, db: Session = Depends(database
     return crud.add_item_price(db=db, price_entry=entry)
 
 
-@app.post("/auth/signup/", response_model=schemas.User)
+@app.post("/auth/signup/", response_model=schemas.SignupResponse)
 def create_user(user: schemas.UserCreate, db: Session = Depends(database.get_db)):
     db_user = crud.get_user_by_email(db, email=user.email)
     if db_user:
         raise HTTPException(status_code=400, detail="Email already registered")
-    return crud.create_user(db=db, user=user)
+    return schemas.SignupResponse(
+        user=crud.create_user(db=db, user=user),
+        token=security.create_access_token(
+            data={"sub": user.username},
+            expires_delta=timedelta(minutes=security.ACCESS_TOKEN_EXPIRE_MINUTES)
+    )
+)
 
 @app.post("/auth/signin/", response_model=schemas.Token)
 async def login_for_access_token(

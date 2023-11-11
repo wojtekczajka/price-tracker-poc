@@ -112,3 +112,7 @@ class SubscriptionRequest(BaseModel):
 
 class Subscription(SubscriptionCreate):
     id: int
+
+class SignupResponse(BaseModel):
+    user: User
+    token: str
