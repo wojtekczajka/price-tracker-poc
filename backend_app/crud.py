@@ -153,3 +153,7 @@ def update_user_subscribed_true(db: Session, id: int):
     update = db.query(models.User).filter(models.User.id == id).first()
     update.is_subscribed = True
     db.commit()
+
+def get_newest_price(db: Session, item_id: int):
+    return db.query(models.Price).filter_by(item_id=item_id).order_by(models.Price.date.desc()).first()
+
