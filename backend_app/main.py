@@ -298,7 +298,7 @@ async def get_followed_items(
     db: Session = Depends(database.get_db)
 ):
     followed_items = crud.get_items_followed_by_user(db, current_user.id)
-    return [{"id": item.item.id, "name": item.item.name} for item in followed_items]
+    return [{"id": item.item.id, "name": item.item.name, "item_img_url": item.item.item_img_url} for item in followed_items]
 
 
 @app.get("/user_subscription/")
