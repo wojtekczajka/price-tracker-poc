@@ -267,8 +267,9 @@ async def follow_item(
 @app.get("/items/")
 async def get_items(current_user: Annotated[schemas.User, Depends(security.get_current_active_user)],
                     db: Session = Depends(database.get_db)):
-    products = crud.get_items_with_comments(db)
-    return products
+    items = crud.get_items(db)
+    items_dto = [map_to_item_dto(item=item, db=db) for item in items]
+    return items_dto
 
 
 @app.get("/item_prices/")
@@ -298,7 +299,9 @@ async def get_followed_items(
     db: Session = Depends(database.get_db)
 ):
     followed_items = crud.get_items_followed_by_user(db, current_user.id)
-    return [{"id": item.item.id, "name": item.item.name, "item_img_url": item.item.item_img_url} for item in followed_items]
+    items: models.Item = map(lambda followed_item: followed_item.item, followed_items)
+    items_dto = [map_to_item_dto(item=item, db=db) for item in items]
+    return items_dto
 
 
 @app.get("/user_subscription/")
@@ -349,3 +352,12 @@ async def create_user_subscription(
         current_user: Annotated[schemas.User, Depends(security.get_current_active_user)],
         db: Session = Depends(database.get_db)):
     return crud.delete_current_subscription(db, current_user.id)
+
+
+def map_to_item_dto(item: models.Item, db: Session):
+    return {
+        "id": item.id,
+        "name": item.name,
+        "item_img_url": item.item_img_url,
+        "newest_price": crud.get_newest_price(db=db, item_id=item.id)
+    }
