@@ -273,20 +273,13 @@ async def get_items(current_user: Annotated[schemas.User, Depends(security.get_c
 
 
 @app.get("/item_prices/")
-async def get_item_prices(current_user: Annotated[schemas.User, Depends(security.get_current_active_user)],
-                          item_id: int,
-                          db: Session = Depends(database.get_db)
-                          ):
-
+async def get_item_prices(item_id: int, db: Session = Depends(database.get_db)):
     item = crud.get_item_by_id(db, item_id)
     return item.prices
 
 
 @app.get("/newest_item_price/")
-async def get_item_newest_price_by_item_id(current_user: Annotated[schemas.User, Depends(security.get_current_active_user)],
-                          item_id: int,
-                          db: Session = Depends(database.get_db)
-                          ):
+async def get_item_newest_price_by_item_id(item_id: int, db: Session = Depends(database.get_db)):
     newset_price = crud.get_newest_price(db=db, item_id=item_id) 
     if not newset_price:
         raise HTTPException(
